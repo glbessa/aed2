@@ -13,14 +13,19 @@ use graph::Graph;
 fn main() {
     let mut g2 = Graph::from_file(String::from("graph1.txt")).unwrap();
 
-    let mut g3 = match Graph::from_file(String::from("graph2.txt")) {
-        Ok(g) => g,
-        Err(msg) => {
-            println!("{}", msg);
-            Graph::new()
-        }
-    };
+    let mut g3 = Graph::from_file(String::from("tsp3_1194.txt")).unwrap();
 
+    let mut g4 = Graph::from_file(String::from("graph3.txt")).unwrap();
+
+    println!("{}", g4);
+
+    //let kruskal = g4.get_mst_kruskal();
+    println!("Kruskal mst:\n{:?}", kruskal.relations);
+    for t in kruskal.relations.into_iter() {
+        println!("{:?}", t);
+    }
+
+    /*
     // Imprime o grafo
     println!("{}", g3);
     
@@ -32,8 +37,11 @@ fn main() {
 
     println!("Dijkstra path:");
     
-    for vertex in path.iter() {
-        print!(" -> {}", g2.get_vertex(*vertex).unwrap());
+    for i in 0..path.len() {
+        if i != 0 {
+            print!(" -> ")
+        }
+        print!("{}", g2.get_vertex(path[i]).unwrap());
     }
     
     println!("\n\n");
@@ -44,5 +52,5 @@ fn main() {
     println!("\n");
 
     let prim = g3.get_mst_prim();
-    println!("Prim mst:\n{}", prim);
+    println!("Prim mst:\n{}", prim);*/
 }

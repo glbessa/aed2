@@ -1,6 +1,7 @@
 // https://doc.rust-lang.org/stable/std/collections/struct.BinaryHeap.html
-use std::collections::{LinkedList, HashSet, BinaryHeap};
-use std::cmp::{Ordering, Reverse};
+use std::collections::{LinkedList, HashSet, BinaryHeap, VecDeque};
+use std::cmp::{Ordering, Reverse, Eq, Ord}; // https://doc.rust-lang.org/std/cmp/index.html
+use std::clone::Clone;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::exit;
@@ -40,20 +41,21 @@ impl Ord for Edge {
 
 impl fmt::Display for Edge {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Edge (src: {}; dst: {}; weight: {})\n", self.src, self.dst, self.weight);
+        let _ = write!(f, "Edge (src: {}; dst: {}; weight: {})\n", self.src, self.dst, self.weight);
         Ok(())
     }
 }
 // -------------------------------
 
+// Generics: https://doc.rust-lang.org/book/ch10-01-syntax.html
 #[derive(Debug)]
-pub struct Graph {
-    vertices: Vec<String>,
-    relations: Vec<Vec<i32>>
+pub struct Graph<V: Eq + fmt::Display + Clone> {
+    vertices: Vec<V>,
+    relations: Vec<Vec<u64>>
 }
 
 // https://doc.rust-lang.org/rust-by-example/hello/print/print_display.html
-impl fmt::Display for Graph {
+impl<V: Eq + fmt::Display + Clone> fmt::Display for Graph<V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Graph (\n");
         for i in 0..self.relations.len() {
@@ -69,21 +71,7 @@ impl fmt::Display for Graph {
     }
 }
 
-impl Graph {
-    pub fn new() -> Self {
-        return Graph {
-            vertices: Vec::new(),
-            relations: Vec::new()
-        };
-    }
-
-    pub fn from(vertices_ids: Vec<String>, adjacency_matrix: Vec<Vec<i32>>) -> Self {
-        Graph {
-            vertices: vertices_ids,
-            relations: adjacency_matrix
-        }
-    }
-
+impl Graph<String> {
     pub fn from_file(file_name: String) -> Result<Self, &'static str> {
         let mut f = File::open(file_name)
             .expect("Error while opening file!");
@@ -93,24 +81,14 @@ impl Graph {
             .expect("Error while reading file!");
 
         let vertices_ids: Vec<String>;
-        let mut adjacency_matrix: Vec<Vec<i32>> = Vec::new();
+        let mut adjacency_matrix: Vec<Vec<u64>> = Vec::new();
         let mut lines: Vec<&str> = content.split("\n").collect();
 
         vertices_ids = lines.remove(0).split(",").map(|s| String::from(s)).collect();
-
-        // Faz algo muito louco
-        /*
-        let _ = lines.into_iter()
-            .map(|line| line.split(" ")
-                            .map(|s| s.parse::<i32>())
-                            .map(Result::unwrap)
-                            .collect())
-            .map(|v| adjacency_matrix.push(v));
-        */
         
         for line in lines.into_iter() {
-            let t = line.split(" ")
-                .map(|s| s.parse::<i32>())
+            let t: Vec<_> = line.split(" ")
+                .map(|s| s.parse::<u64>())
                 .map(Result::unwrap)
                 .collect();
 
@@ -120,8 +98,43 @@ impl Graph {
         Ok(Graph::from(vertices_ids, adjacency_matrix))        
     }
 
-    pub fn insert_vertex(&mut self, vertex: &str) {
-        self.vertices.push(vertex.to_string());
+    pub fn with_n_vertices(n_vertices: usize) -> Self {
+        let mut vertices: Vec<String> = vec![String::from(""); n_vertices];
+        let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; n_vertices]; n_vertices];
+
+        Graph::from(vertices, adjacency_matrix)
+    }
+}
+
+impl<V: Eq + fmt::Display + Clone> Graph<V> {
+    pub fn new() -> Self {
+        return Graph {
+            vertices: Vec::new(),
+            relations: Vec::new()
+        };
+    }
+
+    pub fn from(vertices_ids: Vec<V>, adjacency_matrix: Vec<Vec<u64>>) -> Self {
+        Graph {
+            vertices: vertices_ids,
+            relations: adjacency_matrix
+        }
+    }
+
+    pub fn from_only_with_vertices(vertices_ids: Vec<V>) -> Self {
+        let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; vertices_ids.len()]; vertices_ids.len()];
+
+        Graph::from(vertices_ids, adjacency_matrix)
+    }
+
+    pub fn to_file(&self, file_name: String) -> Result<(), &'static str> {
+
+
+        Ok(())
+    }
+
+    pub fn insert_vertex(&mut self, vertex: V) {
+        self.vertices.push(vertex);
 
         self.relations.push(vec![0; self.vertices.len()]);
 
@@ -140,7 +153,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn get_vertex(&self, vertex_idx: usize) -> Result<&String, &'static str> {
+    pub fn get_vertex(&self, vertex_idx: usize) -> Result<&V, &'static str> {
         if self.vertices.len() <= vertex_idx {
             return Err("Index out of range!");
         }
@@ -148,7 +161,7 @@ impl Graph {
         Ok(&self.vertices[vertex_idx])
     }
 
-    pub fn insert_edge(&mut self, src_idx: usize, dst_idx: usize, edge_weight: i32, directed: bool) -> Result<(), &'static str> {
+    pub fn insert_edge(&mut self, src_idx: usize, dst_idx: usize, edge_weight: u64, directed: bool) -> Result<(), &'static str> {
         if self.vertices.len() <= src_idx || self.vertices.len() <= dst_idx {
             return Err("Index out of range!");
         }
@@ -163,7 +176,7 @@ impl Graph {
     }
 
     pub fn remove_edge(&mut self, src_idx: usize, dst_idx: usize, directed: bool) -> Result<(), &'static str> {
-        if self.vertices.len() <= src_idx || self.vertices.len() <= dst_idx {
+        if self.num_vertices() <= src_idx || self.num_vertices() <= dst_idx {
             return Err("Index out of range!");
         }
 
@@ -176,63 +189,93 @@ impl Graph {
         Ok(())
     }
 
-    pub fn get_edge_weight(&self, src_idx: usize, dst_idx: usize) -> Result<i32, &'static str> {
-        if self.vertices.len() <= src_idx || self.vertices.len() <= dst_idx {
+    pub fn get_edge_weight(&self, src_idx: usize, dst_idx: usize) -> Result<u64, &'static str> {
+        if self.num_vertices() <= src_idx || self.num_vertices() <= dst_idx {
             return Err("Index out of range!");
         }
 
-        let weight: i32 = self.relations[src_idx][dst_idx];
+        let weight: u64 = self.relations[src_idx][dst_idx];
 
         Ok(weight)
     }
 
-    pub fn get_adjacent_vertices(&self, vertex_idx: usize) -> Result<LinkedList<usize>, &'static str> {
-        if self.vertices.len() <= vertex_idx {
+    pub fn get_adjacent_vertices(&self, vertex_idx: usize) -> Result<Vec<usize>, &'static str> {
+        if self.num_vertices() <= vertex_idx {
             return Err("Index out of range!");
         }
 
-        let mut adjacent_vertices: LinkedList<usize> = LinkedList::new();
+        let mut adjacent_vertices: Vec<usize> = Vec::new();
         
-        for i in 0..self.vertices.len() {
-            if self.relations[vertex_idx][i] > 0 {
-                adjacent_vertices.push_back(i);
+        for i in 0..self.num_vertices() {
+            if self.get_edge_weight(vertex_idx, i).unwrap() > 0 {
+                adjacent_vertices.push(i);
             }
         }
 
         Ok(adjacent_vertices)
     }
 
-    pub fn get_dijkstra_path(&self, src_idx: usize, dst_idx: usize) -> Result<LinkedList<usize>, &'static str> {
+    pub fn num_vertices(&self) -> usize {
+        self.vertices.len()
+    }
+
+    pub fn is_disconnected(&self) -> bool {
+        if self.vertices.len() == 0 {
+            return false;
+        }
+
+        let mst: Graph<V> = self.get_mst_kruskal();
+        let mut forest: Vec<HashSet<usize> = Vec::new();
+        for i in 0..self.num_vertices() {
+            forest.push(HashSet::from([i]));
+        }
+
+        // Caso o numero de vertices da mst seja diferente do grafo atual ele tem no minimo
+        //      um vertice que nao esta conectado a nenhum outro.
+        if self.num_vertices() != mst.num_vertices() {
+            return true;
+        }
+
+        let mut actual_idx:
+
+        loop {
+            
+        }
+    }
+
+    // Algoritmo de Dijkstra
+    pub fn get_dijkstra_path(&self, src_idx: usize, dst_idx: usize) -> Result<VecDeque<usize>, &'static str> {
         if self.vertices.len() <= src_idx || self.vertices.len() <= dst_idx {
             return Err("Index out of range!");
         }
 
         let mut previous_vertex: Vec<Option<usize>> = vec![None; self.vertices.len()];
-
         let mut path_cost: Vec<Option<usize>> = vec![None; self.vertices.len()];
-        path_cost[src_idx] = Some(0);
-
         let mut is_closed: Vec<bool> = vec![false; self.vertices.len()];
-
-        let mut vertices_to_visit: LinkedList<usize> = LinkedList::new();
-        let mut vert_to_visit: BinaryHeap<(i32, usize)> = BinaryHeap::new();
-        vertices_to_visit.push_back(src_idx);
-        vert_to_visit.push((0, src_idx));
-
+        let mut vert_to_visit: BinaryHeap<Reverse<(u64, usize)>> = BinaryHeap::new();
         let mut vertex_idx: usize;
 
+        // custo do no inicial é 0
+        path_cost[src_idx] = Some(0);
+        // insere o no inicial na heap
+        vert_to_visit.push(Reverse((0, src_idx)));
+
         loop {
+            // remove o primeiro nó da heap
             vertex_idx = match vert_to_visit.pop() {
-                Some((_, v)) => v,
+                Some(Reverse((_, v))) => v,
                 None => break
             };
 
+            // verifica se esse no ja nao esta fechado
             if is_closed[vertex_idx] {
                 continue;
             }
 
+            // fecha o no
             is_closed[vertex_idx] = true;
 
+            // verifica os adjacentes desse no, atualiza seus pesos e adiciona na heap
             match self.get_adjacent_vertices(vertex_idx) {
                 Ok(list) => {
                     for idx in list.iter() {
@@ -254,13 +297,13 @@ impl Graph {
                                 if cost > total_cost {
                                     path_cost[*idx] = Some(total_cost);
                                     previous_vertex[*idx] = Some(vertex_idx);
-                                    vert_to_visit.push((total_cost.try_into().unwrap(), *idx));
+                                    vert_to_visit.push(Reverse((total_cost.try_into().unwrap(), *idx)));
                                 }
                             },
                             None => {
                                 path_cost[*idx] = Some(total_cost);
                                 previous_vertex[*idx] = Some(vertex_idx);
-                                vert_to_visit.push((total_cost.try_into().unwrap(), *idx));
+                                vert_to_visit.push(Reverse((total_cost.try_into().unwrap(), *idx)));
                             }
                         }
                     }
@@ -269,7 +312,7 @@ impl Graph {
             }
         }
 
-        let mut path: LinkedList<usize> = LinkedList::new();
+        let mut path: VecDeque<usize> = VecDeque::new();
         path.push_front(dst_idx);
         let mut actual_vertex: usize = dst_idx;
 
@@ -290,7 +333,7 @@ impl Graph {
     pub fn get_mst_kruskal(&self) -> Self {
         let mut a: HashSet<(usize, usize)> = HashSet::new();
         let mut v_sets: Vec<HashSet<usize>> = Vec::new();
-        let mut heap: BinaryHeap<Reverse<(i32, (usize, usize))>> = BinaryHeap::new();
+        let mut heap: BinaryHeap<Reverse<(u64, (usize, usize))>> = BinaryHeap::new();
 
         // Criando a floresta de conjuntos
         for i in 0..self.vertices.len() {
@@ -336,7 +379,7 @@ impl Graph {
             }
         }
 
-        let mut adjacency_matrix: Vec<Vec<i32>> = vec![vec![0; self.relations.len()]; self.relations.len()];
+        let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; self.relations.len()]; self.relations.len()];
         for (src, dst) in a.into_iter() {
             adjacency_matrix[src][dst] = self.get_edge_weight(src, dst).unwrap();
         }
@@ -346,9 +389,10 @@ impl Graph {
 
     // Algoritmo de Prim: inicia adicionando ao conjunto A os vertices ligados pela aresta de menor custo
     //      e após vai adicionando os vertices que tiverem menor custo e estejam sejam adjacentes aos já existentes
+    // https://pt.wikipedia.org/wiki/Algoritmo_de_Prim
     pub fn get_mst_prim(&self) -> Self {
         let mut a: HashSet<usize> = HashSet::with_capacity(self.vertices.len());
-        let mut heap: BinaryHeap<Reverse<(i32, (usize, usize))>> = BinaryHeap::new();
+        let mut heap: BinaryHeap<Reverse<(u64, (usize, usize))>> = BinaryHeap::new();
         let mut edges: Vec<(usize, usize)> = Vec::with_capacity(self.vertices.len() - 1);
 
         // Pega a aresta de menor valor diferente de zero
@@ -409,15 +453,29 @@ impl Graph {
         }
 
         // Transforma tudo em um novo grafo :)
-        let mut adjacency_matrix: Vec<Vec<i32>> = vec![vec![0; self.relations.len()]; self.relations.len()];
+        let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; self.relations.len()]; self.relations.len()];
         for (src, dst) in edges.into_iter() {
             adjacency_matrix[src][dst] = self.get_edge_weight(src, dst).unwrap();
         }
 
         return Graph::from(self.vertices.clone(), adjacency_matrix);
     }
+
+    /*
+    // Algoritmo de Boruvka:
+    // https://pt.wikipedia.org/wiki/Algoritmo_de_Bor%C5%AFvka
+    pub fn get_mst_boruvka(&self) -> Self {
+        let mut vertices: Vec<V> = self.vertices.clone();
+        let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; self.relations.len()]; self.relations.len()];
+        let mut graph: Graph<V> = Graph::from(vertices, adjacency_matrix);
+
+
+
+    }
+    */
 }
 
+/*
 // https://doc.rust-lang.org/book/ch11-01-writing-tests.html
 // https://doc.rust-lang.org/rustc/tests/index.html
 #[cfg(test)]
@@ -479,3 +537,4 @@ mod tests {
         }
     }
 }
+*/
