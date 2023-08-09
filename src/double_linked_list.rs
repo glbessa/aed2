@@ -8,8 +8,6 @@ impl<T: PartialOrd> DoubleLinkedList<T> {
     }
 
     pub fn push_front(&mut self, data: T) {
-        self.0 {
-            Some((prev, _, ref mut next))
-        }
+        todo!();
     }
 }

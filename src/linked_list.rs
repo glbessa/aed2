@@ -39,7 +39,7 @@ fn main() {
     ll.push_back(4);
     ll.push_front(3);
     ll.push_back(8);
-    ll.push(2, 2);
+    ll.push(2, 10);
 
     println!("{:?}", ll);
 }

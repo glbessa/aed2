@@ -1,0 +1,13 @@
+*
+!.gitignore
+!*.rs
+!*.py
+!src
+!Cargo.toml
+!extra
+!resorces
+
+# Added by cargo
+
+/target
+/Cargo.lock

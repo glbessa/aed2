@@ -47,11 +47,21 @@ impl fmt::Display for Edge {
 }
 // -------------------------------
 
+pub trait AdjMatrix<T> {
+    fn insert_vertex(&mut self, vertex: V);
+    fn remove_vertex(&mut self, vertex_index: usize) -> Result<(), &'static str>;
+    fn insert_edge(&mut self, src_idx: usize, dst_idx: usize, edge_weight: u64, directed: bool) -> Result<(), &'static str>;
+    fn remove_edge(&mut self, src_idx: usize, dst_idx: usize, directed: bool) -> Result<(), &'static str>;
+    fn get_edge_weight(&self, src_idx: usize, dst_idx: usize) -> Result<T, &'static str>;
+    fn get_adjacent_vertices(&self, vertex_idx: usize) -> Result<Vec<usize>, &'static str>;
+}
+
 // Generics: https://doc.rust-lang.org/book/ch10-01-syntax.html
 #[derive(Debug)]
-pub struct Graph<V: Eq + fmt::Display + Clone> {
+pub struct Graph<V: Eq + fmt::Display + Clone, M: Matrix + Clone + fmt::Display> {
     vertices: Vec<V>,
-    relations: Vec<Vec<u64>>
+    //relations: Vec<Vec<u64>>
+    relations: M
 }
 
 // https://doc.rust-lang.org/rust-by-example/hello/print/print_display.html
@@ -61,7 +71,7 @@ impl<V: Eq + fmt::Display + Clone> fmt::Display for Graph<V> {
         for i in 0..self.relations.len() {
             for j in 0..self.relations.len() {
                 if self.get_edge_weight(i, j).unwrap() != 0 {
-                    write!(f, "\t{} -- ({}) --> {}\n", self.get_vertex(i).unwrap(), self.get_edge_weight(i, j).unwrap(), self.get_vertex(j).unwrap());
+                    write!(f, "\t{} -- \t{}\t --> {}\n", self.get_vertex(i).unwrap(), self.get_edge_weight(i, j).unwrap(), self.get_vertex(j).unwrap());
                 }
             }
         }
@@ -218,7 +228,64 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
     pub fn num_vertices(&self) -> usize {
         self.vertices.len()
     }
+    
+    pub fn breadth_first_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
 
+    pub fn depth_first_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn depth_limited_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn iterative_deepening_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn best_first_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn greedy_best_first_search(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn ida_star(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn sma_star(&self, src: usize, dst: usize) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn a_star(&self, src: usize, dst: usize, heuristic_dist: Vec<u64>) -> Vec<usize> {
+        Vec::new()
+    }
+    
+    pub fn hill_climbing(&self, cost_func: fn(usize) -> usize) -> Self {
+        Graph::new()
+    }
+    
+    pub fn random_restart_hill_climbing(&self) -> Self {
+        Graph::new()
+    }
+    
+    pub fn simulated_annealing(&self) -> Self {
+        Graph::new()
+    }
+    
+    pub fn local_beam_search(&self) -> Self {
+        Graph::new()
+    }
+    
+    pub fn genetic_algorithms(&self) -> Self {
+        Graph::new()
+    }
+
+    /*
     pub fn is_disconnected(&self) -> bool {
         if self.vertices.len() == 0 {
             return false;
@@ -239,9 +306,11 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
         let mut actual_idx:
 
         loop {
-            
+            break;
         }
-    }
+
+        true
+    }*/
 
     // Algoritmo de Dijkstra
     pub fn get_dijkstra_path(&self, src_idx: usize, dst_idx: usize) -> Result<VecDeque<usize>, &'static str> {
@@ -350,12 +419,14 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
         }
 
         for _ in 0..heap.len() {
+            // Remove a aresta de menor peso da heap
             let (u, v) = match heap.pop() {
                 Some(Reverse((_, (u1, v1)))) => (u1, v1),
                 None => (0, 0)
             };
             let (mut set1_idx, mut set2_idx): (usize, usize) = (0, 0);
 
+            // Verifica em todos os sets se src ou dst estão inclusos neles
             for i in 0..v_sets.len() {
                 if v_sets[i].contains(&u) {
                     set1_idx = i;
@@ -366,8 +437,12 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
                 }
             }
 
+            // Caso os dois não estejam no mesmo set
             if set1_idx != set2_idx {
+                // Insere-se essa aresta
                 a.insert((u, v));
+                
+                // E junta os sets
                 let t = v_sets.remove(set2_idx);
                 
                 if set2_idx < set1_idx {
