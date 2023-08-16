@@ -1,4 +1,5 @@
 use std::fmt;
+use std::error::{Error};
 use std::convert::TryFrom;
 
 /*
@@ -18,7 +19,7 @@ pub struct HashTable<V> {
 impl<V> HashTable<V> {
     pub fn new() -> Self {
         let mut keys: Vec<String> = Vec::with_capacity(20);
-        keys.set_len(20);
+        //keys.set_len(20);
         HashTable {
             keys: Vec::with_capacity(20),
             values: Vec::with_capacity(20),

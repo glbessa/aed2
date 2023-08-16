@@ -21,7 +21,3 @@ impl<T> Node<T> {
         Node {value: v, left: None, right: None}
     }
 }
-
-fn main() {
-
-}

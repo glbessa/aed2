@@ -41,12 +41,12 @@ impl Ord for Edge {
 
 impl fmt::Display for Edge {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let _ = write!(f, "Edge (src: {}; dst: {}; weight: {})\n", self.src, self.dst, self.weight);
+        let _ = write!(f, "Edge (src: {}; dst: {}; weight: {})\n", self.src, self.dst, self.weight)?;
         Ok(())
     }
 }
 // -------------------------------
-
+/*
 pub trait AdjMatrix<T> {
     fn insert_vertex(&mut self, vertex: V);
     fn remove_vertex(&mut self, vertex_index: usize) -> Result<(), &'static str>;
@@ -55,10 +55,10 @@ pub trait AdjMatrix<T> {
     fn get_edge_weight(&self, src_idx: usize, dst_idx: usize) -> Result<T, &'static str>;
     fn get_adjacent_vertices(&self, vertex_idx: usize) -> Result<Vec<usize>, &'static str>;
 }
-
+*/
 // Generics: https://doc.rust-lang.org/book/ch10-01-syntax.html
 #[derive(Debug)]
-pub struct Graph<V: Eq + fmt::Display + Clone, M: Matrix + Clone + fmt::Display> {
+pub struct Graph<V: Eq + fmt::Display + Clone, M: AdjMatrix<u32> + Clone + fmt::Display, I> {
     vertices: Vec<V>,
     //relations: Vec<Vec<u64>>
     relations: M
@@ -536,7 +536,6 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
         return Graph::from(self.vertices.clone(), adjacency_matrix);
     }
 
-    /*
     // Algoritmo de Boruvka:
     // https://pt.wikipedia.org/wiki/Algoritmo_de_Bor%C5%AFvka
     pub fn get_mst_boruvka(&self) -> Self {
@@ -544,13 +543,10 @@ impl<V: Eq + fmt::Display + Clone> Graph<V> {
         let mut adjacency_matrix: Vec<Vec<u64>> = vec![vec![0; self.relations.len()]; self.relations.len()];
         let mut graph: Graph<V> = Graph::from(vertices, adjacency_matrix);
 
-
-
+        todo!();
     }
-    */
 }
 
-/*
 // https://doc.rust-lang.org/book/ch11-01-writing-tests.html
 // https://doc.rust-lang.org/rustc/tests/index.html
 #[cfg(test)]
@@ -612,4 +608,3 @@ mod tests {
         }
     }
 }
-*/
